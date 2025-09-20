@@ -1,0 +1,916 @@
+<!DOCTYPE html><html lang="en"><head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, user-scalable=no, initial-scale=1.0, maximum-scale=1.0, minimum-scale=1.0">
+    <meta http-equiv="X-UA-Compatible" content="ie=edge">
+    <title>AVO</title>
+    <link href="/uithoorn/img/favicon.png" rel="shortcut icon" type="image/x-icon">
+    <link rel="stylesheet" href="/uithoorn/css/fontawesome.min.css">
+    <link href="/uithoorn/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/uithoorn/css/app.css" rel="stylesheet">
+    <link rel="stylesheet" href="/uithoorn/css/jquery-ui.min.css">
+
+    <link rel="stylesheet" href="/uithoorn/css/leaflet.css">
+
+    
+    <script src="/uithoorn/js/leaflet.js"></script>
+    <script src="/uithoorn/js/jquery-3.6.0.js"></script>
+    <script src="/uithoorn/js/jquery-ui-1.12.1.js"></script>
+    <script src="/uithoorn/js/jquery.form-4.2.2.js"></script>
+    <script>
+        function GetToken() {
+            var token = '<input name="__RequestVerificationToken" type="hidden" value="qVP_BGEIhoSn0cmfEloMkF_GaGlVhlzeAC-FgkwDmUOvYqzaGHnpzzzsVEKLSKR_C9oTsOpFqiws6foGoL1CipVnzlPGvJlyqgpHvAW5bEg1" />';
+            token = $(token).val();
+            return token;
+        }
+        function OnDayOfTheWeekChange() {
+            var date = $("#SearchDateValue").val();
+            if (date != '') {
+                var day = Number(new Date(date).getDay());
+                if ($("#DayOfTheWeek").val() != day) {
+                    $("#SearchDate").datepicker("setDate", null);
+                    $("#SearchDateValue").val('');
+                }  
+            }
+            $("#SearchDayOfTheWeek").val($("#DayOfTheWeek").val());
+        }
+
+        $(function () {
+            $("#SearchDate").datepicker({
+                buttonText: "Select date",
+                dateFormat: "d-M-yy",
+                altField: "#SearchDateValue",
+                altFormat: "yy-mm-dd",
+                changeMonth: true,
+                changeYear: true,
+                minDate: "+1D",
+                beforeShowDay: function (date) {
+                    var dayofWeek = $("#SearchDayOfTheWeek").val();
+                    if (!(dayofWeek == '' || dayofWeek == '-1')) {
+                        if (date.getDay() == dayofWeek) {
+                            return [true];
+                        }
+                        else
+                            return [false];   
+                    }
+                    return [true];
+                    
+                },
+                onSelect: function () {
+                    var date = $("#SearchDateValue").val();
+                    var day = Number(new Date(date).getDay());
+                    $("#DayOfTheWeek").val(day);
+                }
+            });
+            $.datepicker.regional['nl'] = {
+                clearText: 'Effacer', clearStatus: '',
+                closeText: 'sluiten', closeStatus: 'Onveranderd sluiten ',
+                prevText: '<vorige', prevStatus: 'Zie de vorige maand',
+                nextText: 'volgende>', nextStatus: 'Zie de volgende maand',
+                currentText: 'Huidige', currentStatus: 'Bekijk de huidige maand',
+                monthNames: ['januari', 'februari', 'maart', 'april', 'mei', 'juni',
+                    'juli', 'augustus', 'september', 'oktober', 'november', 'december'],
+                monthNamesShort: ['jan', 'feb', 'mrt', 'apr', 'mei', 'jun',
+                    'jul', 'aug', 'sep', 'okt', 'nov', 'dec'],
+                monthStatus: 'Bekijk een andere maand', yearStatus: 'Bekijk nog een jaar',
+                weekHeader: 'Sm', weekStatus: '',
+                dayNames: ['zondag', 'maandag', 'dinsdag', 'woensdag', 'donderdag', 'vrijdag', 'zaterdag'],
+                dayNamesShort: ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'],
+                dayNamesMin: ['zo', 'ma', 'di', 'wo', 'do', 'vr', 'za'],
+                dayStatus: 'Gebruik DD als de eerste dag van de week', dateStatus: 'Kies DD, MM d',
+                dateFormat: 'dd/mm/yy', firstDay: 1,
+                initStatus: 'Kies een datum', isRTL: false
+            };
+            $.datepicker.setDefaults($.datepicker.regional['nl'])
+            var defaultDate = '';
+            if (defaultDate != '') {
+                $("#SearchDate").datepicker("setDate", new Date(defaultDate));
+                $("#SearchDateValue").val(defaultDate);
+            }
+            $('#searchDateCalDiv').click(function () {
+                $("#SearchDate").focus();
+            });
+            
+        })
+    </script>
+
+</head>
+<body>
+    <div class="app">
+        <div class="top">
+
+            <div class="container">
+
+                <div class="row align-items-center">
+                    <div class="col-5 col-md-6">
+
+                        <a class="logo" href="/uithoorn/">
+                            <img src="https://avo.hta.nl/uithoorn/Img/uithoorn_logo.png" onerror="this.src = 'https://avo.hta.nl/uithoorn/Img/uithoorn_logo.png';">
+                        </a>
+
+                    </div>
+                    <div class="col-7 col-md-6 text-right">
+                            <a id="LogIn" class="btn btn-primary" href="/uithoorn/Login">Inloggen <i class="fas fa-sign-in-alt"></i></a>
+                    </div>
+                </div>
+
+            </div>
+
+        </div>
+
+        <input type="hidden" id="ShowAvailableTimeSlotURL" value="/uithoorn/Accommodation/ShowAvailableTimeslots">
+        <input type="hidden" id="ActiveTarieftURL" value="/uithoorn/Accommodation/GetActiveTarief">
+        <input type="hidden" id="GetFixedHoursDisableDatesURL" value="/uithoorn/Accommodation/GetFixedHoursDisableDates">
+        <input type="hidden" id="ZeroValue" value="0,00">
+        <header>
+            <form action="/uithoorn/Accommodation/Search" method="post" novalidate="novalidate">
+                <input name="__RequestVerificationToken" type="hidden" value="j1v8_n7fxVV_P3HEAD727sSuoYBCPMojrWbWSORIBfKMgARC29lPbfKgEtrHBEiVC6-9Krs3nALNm-aZrm5cSiUM3xRPUs2SDIPcstP5pHM1">
+                <div class="search">
+                    <div class="container">
+
+                        <div class="row">
+                            <div class="col"></div>
+                            <div class="col-12 col-md-10 align-self-center">
+
+                                <strong>Ik zoek een ruimte</strong>
+                                <div class="form-row align-items-center">
+                                    <div class="col-6 col-md form-group">
+                                        <div class="input-group">
+                                            <input class="form-control hasDatepicker" type="text" id="SearchDate" value="" readonly="">
+                                            <div id="searchDateCalDiv" class="input-group-append input-group-text"><i class="fas fa-calendar-alt"></i></div>
+                                            <input type="text" name="Date" value="" id="SearchDateValue" hidden="">
+                                            <input type="text" name="SearchDayOfTheWeek" value="" id="SearchDayOfTheWeek" hidden="">
+                                        </div>
+                                    </div>
+                                    <div class="col-6 col-md form-group">
+                                        <select class="form-control" name="DayOfTheWeek" id="DayOfTheWeek" onchange="OnDayOfTheWeekChange()">
+                                            <option value="-1" selected="">Selecteer dag</option>
+                                            <option value="1">Maandag</option>
+                                            <option value="2">Dinsdag</option>
+                                            <option value="3">Woensdag</option>
+                                            <option value="4">Donderdag</option>
+                                            <option value="5">Vrijdag</option>
+                                            <option value="6">Zaterdag</option>
+                                            <option value="0">Zondag</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-6 col-md form-group">
+                                            <select class="form-control" name="Daypart" id="Daypart">
+                                                <option value="0">Welk dagdeel</option>
+                                                    <option value="1">Ochtend</option>
+                                                    <option value="2">Middag</option>
+                                                    <option value="3">Avond</option>
+                                            </select>
+                                    </div>
+
+                                    <div class="col-6 col-md form-group">
+                                        <select class="form-control" name="Duration" id="Duration">
+                                            <option value="0" selected="">Hoe lang</option>
+                                                    <option value="1">1 uur</option>
+                                                    <option value="1,5">1,5 uur</option>
+                                                    <option value="2">2 uur</option>
+                                                    <option value="2,5">2,5 uur</option>
+                                                    <option value="3">3 uur</option>
+                                                    <option value="4">4 uur</option>
+                                                    <option value="8">8 uur</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-6 col-md form-group">
+                                        <select class="form-control" name="Activity" id="Activity" value="0">
+                                            <option value="0">Activiteit</option>
+                                                    <option value="6">Badminton</option>
+                                                    <option value="12">Basketbal</option>
+                                                    <option value="27">Bijeenkomst</option>
+                                                    <option value="49">Creatief</option>
+                                                    <option value="18">Dansen</option>
+                                                    <option value="37">EHBO</option>
+                                                    <option value="55">Feest (verjaardag, bruiloft, etc.)</option>
+                                                    <option value="47">Fysiotherapie</option>
+                                                    <option value="25">Gymnastiek</option>
+                                                    <option value="19">Handbal</option>
+                                                    <option value="14">Hockey</option>
+                                                    <option value="16">Judo</option>
+                                                    <option value="28">Kerk</option>
+                                                    <option value="29">Kickboksen</option>
+                                                    <option value="44">Kinderpartijtje</option>
+                                                    <option value="50">Koor</option>
+                                                    <option value="15">Korfbal</option>
+                                                    <option value="38">Kung Fu</option>
+                                                    <option value="43">Latindance</option>
+                                                    <option value="35">Lessen</option>
+                                                    <option value="24">Ouderen Gymnastiek</option>
+                                                    <option value="42">Pilates</option>
+                                                    <option value="32">School Activiteit</option>
+                                                    <option value="45">Sport</option>
+                                                    <option value="52">Sporten</option>
+                                                    <option value="46">Tafeltennis</option>
+                                                    <option value="31">Training</option>
+                                                    <option value="13">Turnen</option>
+                                                    <option value="48">Verdedigingssport</option>
+                                                    <option value="39">Vergadering</option>
+                                                    <option value="40">Verkiezingen</option>
+                                                    <option value="23">Voetballen</option>
+                                                    <option value="11">Volleybal </option>
+                                                    <option value="34">Welzijns activiteit</option>
+                                                    <option value="22">Yoga</option>
+                                                    <option value="53">Zaalvoetbal</option>
+                                        </select>
+                                    </div>
+
+                                    <div class="col-12 col-md form-group align-self-end">
+                                        <button id="SearchButton" type="submit" class="btn btn-lg btn-info btn-space">Zoeken <i class="fas fa-search"></i></button>
+                                    </div>
+
+                                </div>
+                            </div>
+                            <div class="col"></div>
+                        </div>
+                    </div>
+                </div>
+            </form>
+        </header>
+
+        
+
+
+
+    <script src="/uithoorn/js/jquery-ui.multidatespicker.js"></script>
+    <style>
+        .radioLabel {
+            margin-left: 18px;
+        }
+
+        .readOnly {
+            pointer-events: none;
+        }
+
+        .checkbox.readOnly input:not([disabled]):checked + span:before {
+            background: #b6bfb9;
+            border-color: #b6bfb9;
+        }
+    </style>
+
+
+
+<section class="searching">
+    <div class="container">
+
+        <div class="tabs">
+            <a href="/uithoorn/Accommodation/Detail/106"><i class="fas fa-caret-left"></i> Terug</a>
+        </div>
+
+        <br>
+        <h3>
+            Binnensport
+            <i class="fas fa-caret-right"></i>  Gymzaal A
+            <i class="fas fa-caret-right"></i>  Boeken
+        </h3>
+
+        <div class="card" style="border-color:#ffc000">
+            <div class="card-body">
+                <form id="form-Booking" name="Booking" method="post" action="/uithoorn/Accommodation/Book/106">
+                    <input name="__RequestVerificationToken" type="hidden" value="EQVYdFLqcyyAxdOTSO9eKefbTQnSGoLFzgHGybNZ01xq6NZLn-Vbyr7AZOXSh-4kXCK2ykm_XXpPlth-YpgNmggSJXZU768_W1d_GPKCAgg1">
+                    <input type="hidden" name="RentalID" value="0" id="RentalID">
+                    <input type="hidden" name="EditPlanningRentals" value="false" id="EditPlanningRentals">
+                    <h4> Brede School Legmeer / Gymzaal A</h4>
+                    <div class="row">
+                        <div class="col-md-6">
+                                <div class="form-row">
+                                    <div class="col-12 col-md-5">
+                                        <div class="form-group required">
+                                            <label>Hoe lang wilt u reserveren?</label>
+                                            <select class="form-control" name="selectedTimeLength" id="selectedTimeLength" onchange="HelloTimeSlot(this.value, 106)">
+                                                            <option value="1">1 uur</option>
+                                                            <option value="1,5">1,5 uur</option>
+                                                            <option value="2">2 uur</option>
+                                                            <option value="2,5">2,5 uur</option>
+                                                            <option value="3">3 uur</option>
+                                                            <option value="4">4 uur</option>
+                                                            <option value="8">8 uur</option>
+                                            </select>
+                                        </div>
+
+                                    </div>
+                                    <div class="col-12 col-md-7">
+                                        <div class="form-row">
+                                            <div class="form-group col-6 required">
+                                                <label>Voor wanneer?</label>
+                                                <div class="input-group">
+                                                    <input class="form-control hasDatepicker" type="text" id="datepicker" value="" readonly="" onchange="DateTimeSlot(106,false)">
+                                                    <div id="calDiv" class="input-group-append input-group-text"><i class="fas fa-calendar-alt"></i></div>
+                                                    <input type="text" name="CustomStartDate" value="" id="SelectedDate" hidden="" class="hasDatepicker">
+                                                </div>
+                                            </div>
+
+                                            <div class="form-group col-6 required">
+                                                <label id="labelcustomSelectedTimeSlot">Welke tijd</label>
+                                                <select class="form-control" name="customSelectedTimeSlot" id="customSelectedTimeSlot" onchange="SetSelectedTimes();CalculatePrice(106,false)"><option value="33">15:00 - 16:00</option><option value="34">15:15 - 16:15</option><option value="35">15:30 - 16:30</option><option value="36">15:45 - 16:45</option><option value="37">16:00 - 17:00</option><option value="38">16:15 - 17:15</option><option value="39">16:30 - 17:30</option><option value="40">16:45 - 17:45</option><option value="41">17:00 - 18:00</option><option value="42">17:15 - 18:15</option><option value="43">17:30 - 18:30</option><option value="44">17:45 - 18:45</option><option value="45">18:00 - 19:00</option><option value="46">18:15 - 19:15</option><option value="47">18:30 - 19:30</option><option value="48">18:45 - 19:45</option><option value="49">19:00 - 20:00</option><option value="50">19:15 - 20:15</option><option value="51">19:30 - 20:30</option><option value="52">19:45 - 20:45</option><option value="53">20:00 - 21:00</option><option value="54">20:15 - 21:15</option><option value="55">20:30 - 21:30</option><option value="56">20:45 - 21:45</option><option value="57">21:00 - 22:00</option><option value="58">21:15 - 22:15</option><option value="59">21:30 - 22:30</option><option value="60">21:45 - 22:45</option><option value="61">22:00 - 23:00</option></select>
+                                                <input type="hidden" name="CustomStartTimeSelected" value="15:00" id="CustomStartTimeSelected" size="8" required="">
+                                                <input type="hidden" name="CustomEndTimeSelected" value="16:00" id="CustomEndTimeSelected" size="8" required="">
+                                            </div>
+
+                                        </div>
+
+                                    </div>
+                                </div>
+                            <div class="form-row">
+                                <div class="form-group col-6 col-md-4">
+                                        <label>Het uurtarief</label>
+                                                                            <div class="input-group">
+                                            <div class="input-group-prepend input-group-text"><i class="fas fa-euro-sign"></i></div>
+                                            <input class="form-control price number" type="text" name="Price" value="" readonly="">
+                                        </div>
+                                        <input class="form-control" type="hidden" name="tarief" id="tarief" readonly="readonly" value="25,52">
+                                        <input id="tariefId" type="hidden" name="TariefID" value="38">
+                                    <input id="BasePrice" type="hidden" name="BasePrice" value="25,52">
+                                </div>
+
+                                <div class="form-group col required">
+
+                                    <label>Activiteit</label>
+                                    <select class="form-control" name="SlecetActivity" id="SelectedActivity" onchange="SetActivityCode()" required="">
+                                        <option value="">Activiteit</option>
+                                                <option value="6"> Badminton </option>
+                                                <option value="11"> Volleybal  </option>
+                                                <option value="13"> Turnen </option>
+                                                <option value="14"> Hockey </option>
+                                                <option value="15"> Korfbal </option>
+                                                <option value="16"> Judo </option>
+                                                <option value="18"> Dansen </option>
+                                                <option value="19"> Handbal </option>
+                                                <option value="22"> Yoga </option>
+                                                <option value="23"> Voetballen </option>
+                                                <option value="24"> Ouderen Gymnastiek </option>
+                                                <option value="25"> Gymnastiek </option>
+                                                <option value="29"> Kickboksen </option>
+                                                <option value="31"> Training </option>
+                                                <option value="34"> Welzijns activiteit </option>
+                                                <option value="38"> Kung Fu </option>
+                                                <option value="42"> Pilates </option>
+                                                <option value="43"> Latindance </option>
+                                                <option value="45"> Sport </option>
+                                                <option value="48"> Verdedigingssport </option>
+                                                <option value="50"> Koor </option>
+                                                <option value="53"> Zaalvoetbal </option>
+                                    </select>
+                                    <input type="hidden" name="ActivityCodeID" value="" id="ActivityValue">
+                                </div>
+                            </div>
+
+                            <br>
+                            <br>
+
+                            <h4>Uw contactgegevens</h4>
+
+                            <div class="form-row">
+                                <div class="form-group col-4 required">
+                                    <label>Initialen</label>
+                                    <input class="form-control" maxlength="3" type="text" name="Initials" required="" value="">
+                                </div>
+                                <div class="form-group col-8 required">
+                                    <label>Achternaam</label>
+                                    <input class="form-control" type="text" name="Name" required="" value="">
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group col-12 col-md-4 required">
+                                    <label>Adres</label>
+                                    <input class="form-control" type="text" name="Street" required="" value="">
+                                </div>
+                                <div class="col-12 col-md-8">
+                                    <div class="form-row">
+                                        <div class="form-group col-6 required">
+                                            <label>Huisnr.</label>
+                                            <input class="form-control" maxlength="5" type="text" name="HouseNumber" required="" value="">
+                                        </div>
+                                        <div class="form-group col-6">
+                                            <label>Huisnr. toev.</label>
+                                            <input class="form-control" maxlength="5" type="text" name="HouseNumberAddition" value="">
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group col-4 required">
+                                    <label>Postcode</label>
+                                    <input class="form-control" type="text" name="ZipCode" required="" value="">
+                                </div>
+                                <div class="form-group col-8 required">
+                                    <label>Woonplaats</label>
+                                    <input class="form-control" type="text" name="City" required="" value="">
+                                </div>
+                            </div>
+
+                            <br>
+
+                            <div class="form-group required">
+                                <label>Mobiel nummer</label>
+                                <input class="form-control" type="text" name="MobileNumber" required="" value="">
+                            </div>
+
+                            <div class="form-group required">
+                                <label>E-mailadres</label>
+                                <input class="form-control" type="email" name="EMail" required="" value="">
+                            </div>
+                            <div class="form-group">
+                                <label>Memo</label>
+                                <textarea class="form-control" name="Memo" id="Memo" value="" maxlength="500"></textarea>
+                            </div>
+
+                            <div class="form-group">
+                                <label class="checkbox">
+                                    <input type="checkbox" name="voorwaarden" value="1" required="">
+                                    <span>Ik ga akkoord met de <a href="https://avm.hta.nl/uithoorn/ReportImages/Algemene-voorwaarden-huur-sportaccommodaties_2025_gemeente_uithoorn.pdf" target="_blank">algemene voorwaarden</a></span>
+                                </label>
+                            </div>
+                            <br>
+                            <br>
+
+                            <div class="text-right">
+                                <input type="hidden" name="AccommodationID" value="106">
+                                <button class="btn btn-lg btn-warning" id="ConfirmButton" type="submit" style="margin-left: 51%; display: block;">
+                                    Boeking bevestigen<i class="fas fa-pull-right fa-chevron-circle-right"></i>
+                                </button>
+                            </div>
+
+                            <br>
+                            <br>
+
+                        </div>
+                        <div class="col"></div>
+                        <div class="col-md-4">
+
+                                <strong>Sportzaal</strong>
+                                                                                        <p>
+                                    Randhoornweg 39        
+                                    <br>1422 WX Uithoorn
+                                </p>
+                            <hr>
+
+
+                                <p>
+                                    Aantal personen: 150
+                                    <br>Vloeroppervlakte: 260 m²<br>
+Per uur vanaf:                                     <label class="Euro">€</label> 25,52
+                                </p>
+                            <hr>
+
+                                <i class="fas fa-envelope-open-text"></i> vastgoed@uithoorn.nl                                <br>
+                                                            <i class="fas fa-phone-alt"></i> 0297-513111                                <br>
+                            <br>
+                            <br>
+                            
+
+<strong>Openingstijden</strong>
+<div class="times">
+    <ul>
+        <li>
+            <span>Maandag</span>
+                <span class="value">
+                    07:00 - 23:00
+                </span>
+        </li>
+        <li>
+            <span>
+                Dinsdag
+            </span>
+                <span class="value">07:00 - 23:00 </span>
+        </li>
+        <li>
+
+            <span>
+                Woensdag
+            </span>
+                <span class="value">07:00 - 23:00 </span>
+        </li>
+        <li>
+            <span>
+                Donderdag
+            </span>
+                <span class="value">07:00 - 23:00 </span>
+        </li>
+        <li>
+            <span>
+                Vrijdag
+            </span>
+                <span class="value">07:00 - 23:00 </span>
+
+        </li>
+        <li>
+            <span>
+                Zaterdag
+            </span>
+                <span class="value">
+                    07:00 - 23:00
+                </span>
+        </li>
+        <li>
+            <span>
+                Zondag
+            </span>
+                <span class="value">
+                    07:00 - 23:00
+                </span>
+        </li>
+    </ul>
+</div>
+
+                            <hr>
+                            <div id="map106" class="item-map leaflet-container leaflet-touch leaflet-retina leaflet-fade-anim leaflet-grab leaflet-touch-drag leaflet-touch-zoom" tabindex="0" style="position: relative;"><div class="leaflet-pane leaflet-map-pane" style="transform: translate3d(0px, 0px, 0px);"><div class="leaflet-pane leaflet-tile-pane"><div class="leaflet-layer " style="z-index: 1; opacity: 1;"><div class="leaflet-tile-container leaflet-zoom-animated" style="z-index: 18; transform: translate3d(0px, 0px, 0px) scale(1);"><img alt="" role="presentation" src="https://b.tile.openstreetmap.org/15/16821/10786.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(68px, 28px, 0px); opacity: 1;"><img alt="" role="presentation" src="https://a.tile.openstreetmap.org/15/16821/10785.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(68px, -228px, 0px); opacity: 1;"><img alt="" role="presentation" src="https://a.tile.openstreetmap.org/15/16820/10786.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-188px, 28px, 0px); opacity: 1;"><img alt="" role="presentation" src="https://c.tile.openstreetmap.org/15/16822/10786.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(324px, 28px, 0px); opacity: 1;"><img alt="" role="presentation" src="https://c.tile.openstreetmap.org/15/16821/10787.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(68px, 284px, 0px); opacity: 1;"><img alt="" role="presentation" src="https://c.tile.openstreetmap.org/15/16820/10785.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-188px, -228px, 0px); opacity: 1;"><img alt="" role="presentation" src="https://b.tile.openstreetmap.org/15/16822/10785.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(324px, -228px, 0px); opacity: 1;"><img alt="" role="presentation" src="https://b.tile.openstreetmap.org/15/16820/10787.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(-188px, 284px, 0px); opacity: 1;"><img alt="" role="presentation" src="https://a.tile.openstreetmap.org/15/16822/10787.png" class="leaflet-tile leaflet-tile-loaded" style="width: 256px; height: 256px; transform: translate3d(324px, 284px, 0px); opacity: 1;"></div></div></div><div class="leaflet-pane leaflet-shadow-pane"><img src="https://avo.hta.nl/uithoorn/css/images/marker-shadow.png" class="leaflet-marker-shadow leaflet-zoom-animated" alt="" style="margin-left: -12px; margin-top: -41px; width: 41px; height: 41px; transform: translate3d(168px, 168px, 0px);"></div><div class="leaflet-pane leaflet-overlay-pane"></div><div class="leaflet-pane leaflet-marker-pane"><img src="https://avo.hta.nl/uithoorn/css/images/marker-icon-2x.png" class="leaflet-marker-icon leaflet-zoom-animated leaflet-interactive" alt="" tabindex="0" style="margin-left: -12px; margin-top: -41px; width: 25px; height: 41px; transform: translate3d(168px, 168px, 0px); z-index: 168;"></div><div class="leaflet-pane leaflet-tooltip-pane"></div><div class="leaflet-pane leaflet-popup-pane"></div><div class="leaflet-proxy leaflet-zoom-animated"></div></div><div class="leaflet-control-container"><div class="leaflet-top leaflet-left"><div class="leaflet-control-zoom leaflet-bar leaflet-control"><a class="leaflet-control-zoom-in" href="#" title="Zoom in" role="button" aria-label="Zoom in">+</a><a class="leaflet-control-zoom-out" href="#" title="Zoom out" role="button" aria-label="Zoom out">−</a></div></div><div class="leaflet-top leaflet-right"></div><div class="leaflet-bottom leaflet-left"></div><div class="leaflet-bottom leaflet-right"><div class="leaflet-control-attribution leaflet-control"><a href="https://leafletjs.com" title="A JS library for interactive maps">Leaflet</a> | © <a href="https://osm.org/copyright">OpenStreetMap</a> contributors</div></div></div></div>
+                                <script>
+
+                                    $(document).ready(function () {
+            var accommodationCoordinate =  "52.2510262,4.8053213";
+            var coordinate = accommodationCoordinate.split(',');
+            var lat = coordinate[0];
+            var lon = coordinate[1];
+            if (coordinate.length > 3) {
+                lat = coordinate[0] + "." + coordinate[1];
+                lon = coordinate[2] + "." + coordinate[3];
+            }
+            // map options
+            var mapOptions1 = {
+                                            center: [lat, lon],
+                                            zoom: 15,
+                                        }
+
+        // Creating a Layer object
+        var layer1 = new L.TileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+                                            attribution: '&copy; <a href="https://osm.org/copyright">OpenStreetMap</a> contributors'
+                                        });
+
+    // creating a map
+    var map1 = new L.map('map106', mapOptions1);
+    map1.invalidateSize();
+
+    // Adding layer to the map
+    map1.addLayer(layer1);
+
+    var marker1 = new L.Marker([lat, lon]);
+    marker1.addTo(map1);
+                                    });
+                                </script>
+                            <br>
+                        </div>
+                    </div>
+                </form>
+            </div>
+        </div>
+
+    </div>
+
+</section>
+
+<script src="/uithoorn/js/Timeslot.js"></script>
+<script>
+    var Resources = {
+    Select: 'Selecteer een tijdslot',
+        NoTime: 'Geen tijden beschikbaar'
+    }
+
+    function getclosed(day) {
+        switch (day) {
+            case 0: return false; break;
+            case 1: return false; break;
+            case 2: return false; break;
+            case 3: return false; break;
+            case 4: return false; break;
+            case 5: return false; break;
+            case 6: return false; break;
+        }
+    }
+
+    $(function () {
+        var rootImagePath = '/uithoorn/Content';
+        var fixedHoursType = 'False' === "True" ? true : false;
+        $("#datepicker").datepicker({
+        //showOn: "button",
+        //buttonImage: rootImagePath + "/gif/calendar.gif",
+        //buttonImageOnly: true,
+        buttonText: "Select date",
+            dateFormat: "d MM, yy",
+            altField: "#SelectedDate",
+            altFormat: "yy-mm-dd",
+            changeMonth: true,
+            changeYear: true,
+            minDate: "+1D",
+            maxDate: new Date(""),
+            beforeShowDay: function (date) {
+                var show = true;
+                var closed = getclosed(date.getDay());
+                if (closed == true) {
+                    show = false;
+                }
+                if (show) {
+                    show = IsAvailableDate(date);
+                }
+                if (show && "False" == "True") {
+                    show = !IsDisableDate(date);
+                }
+                return [show];
+
+
+            },
+            onChangeMonthYear: function (year, month) {
+                var minDate = new Date();
+                minDate.setDate(minDate.getDate() + 1);
+                var maxDate = new Date("");
+                var changedDate = new Date(year, month - 1);
+                if (changedDate < minDate) {
+                    month = minDate.getMonth() + 1;
+                    year = minDate.getFullYear();
+                }
+                else if (changedDate > maxDate) {
+                    month = maxDate.getMonth() + 1;
+                    year = maxDate.getFullYear();
+                }
+                if ("False" == "True") {
+                    GetFixedHoursDisableDates(106, month, year);
+                }
+
+
+            }
+        });
+
+        $("#datepicker").change(function () {
+            $("#SelectedEndDate").val("");
+            $("#enddatepicker").val("");
+            $("#enddatepicker").datepicker("destroy");
+            $("#exceptiondatepicker").val("");
+            $("#exceptiondatepicker").multiDatesPicker("destroy");
+            var diff = new Date($('#SelectedDate').val()) - new Date();
+            var days = (diff / 1000 / 60 / 60 / 24) + 2;
+            $("#enddatepicker").datepicker({
+            buttonText: "Select date",
+                dateFormat: "d MM, yy",
+                altField: "#SelectedEndDate",
+                altFormat: "yy-mm-dd",
+                changeMonth: true,
+                changeYear: true,
+                minDate: days,
+                maxDate: new Date(""),
+                beforeShowDay: function (date) {
+                    if (IsAvailableDate(date)) {
+                        return [true];
+                    }
+                    else {
+                        return [false];
+                    }
+                }
+            });
+        });
+
+        $("#enddatepicker").change(function () {
+            var endString = $("#SelectedEndDate").val();
+            var StartDate = new Date($("#SelectedDate").val());
+            StartDate.setDate(StartDate.getDate() + 1);
+            $("#exceptiondatepicker").val("");
+            $("#exceptiondatepicker").multiDatesPicker("destroy");
+            $("#exceptiondatepicker").multiDatesPicker({
+            buttonText: "Select date",
+                dateFormat: "dd-MM-yy",
+                altField: "#SelectedExceptionDays",
+                altFormat: "yy-mm-dd",
+                changeMonth: true,
+                changeYear: true,
+                allowMultidate: true,
+                multidateSeparator: ',',
+                minDate: StartDate,
+                maxDate: new Date(endString),
+                beforeShowDay: function (date) {
+                    var agendastartDateMoment = $('#SelectedDate').val();
+                    var day = Number(new Date(agendastartDateMoment).getDay());
+                    if (date.getDay() === day && IsAvailableDate(date))
+                        return [true];
+                    else
+                        return [false];
+                },
+                onSelect: function () {
+                    //Calendar jumps to current month with jQuery multi date picker
+
+                    var datepickerObj = $(this).data("datepicker");
+                    var datepickerSettings = datepickerObj.settings;
+
+                    var tempDay = datepickerObj.selectedDay;
+                    var tempMonth = datepickerObj.selectedMonth + 1;
+                    var tempYear = datepickerObj.selectedYear;
+                    var pickedDate = tempDay + "/" + tempMonth + "/" + tempYear;
+
+                    delete datepickerSettings["defaultDate"];
+
+                    datepickerSettings.defaultDate = pickedDate;
+
+                    $("#exceptiondatepicker").blur();
+                    setTimeout(function () {
+                        $("#exceptiondatepicker").focus();
+                    }, 1);
+                }
+            });
+        });
+
+        get_default_date();
+
+        function get_default_date() {
+            var date = new Date();
+            date.setDate(date.getDate() + 1);
+            var isDayFilter = false;
+            var weeksForSearch = Number('0')
+            if ("".length > 0) {
+                date = new Date('');
+                isDayFilter = true;
+            }
+            if ("".length > 0) {
+                date = new Date('');
+                if ("".length > 0) {
+                    $('#CustomStartTimeSelected').val('');
+                }
+            }
+            var defaultDate = new Date(date);
+            if ("False" == "True") {
+                GetFixedHoursDisableDates(106, (date.getMonth() + 1), date.getFullYear());
+            }
+            var count = 0;
+            while ((!IsAvailableDate(date)) || getclosed(date.getDay()) || ("False" == "True" && IsDisableDate(date))) {
+                if (isDayFilter) {
+                    if (weeksForSearch > count) {
+                        date.setDate(date.getDate() + 7);
+                        defaultDate = LoadFixedHoursDisableDates(date, defaultDate);
+                    }
+                    else {
+                        if (count == 0 || count == weeksForSearch)
+                            date = new Date('');
+                        date.setDate(date.getDate() + 1);
+                        defaultDate = LoadFixedHoursDisableDates(date, defaultDate);
+                    }
+                }
+                else {
+                    date.setDate(date.getDate() + 1);
+                    defaultDate = LoadFixedHoursDisableDates(date, defaultDate);
+                }
+                count++;
+            }
+            $("#datepicker").datepicker("setDate", date);
+        }
+
+        function LoadFixedHoursDisableDates(date, defaultDate) {
+            if ("False" == "True" && ((date.getMonth() != defaultDate.getMonth()) || (date.getFullYear() != defaultDate.getFullYear()))) {
+                GetFixedHoursDisableDates(106, (date.getMonth() + 1), date.getFullYear());
+                return new Date(date);
+            }
+            else {
+                return defaultDate;
+            }
+        }
+
+        var hours = $("#selectedTimeLength").val();
+        HelloTimeSlot(hours, 106, fixedHoursType);
+
+        $('#form-Booking').on('submit', function (e) {
+            //var data = $("#form-goup :input").serializeArray();
+            $(".overlay").show();
+        });
+
+            
+
+        var StartDate = new Date($("#SelectedDate").val());
+        StartDate.setDate(StartDate.getDate() + 1);
+        $("#enddatepicker").datepicker({
+            buttonText: "Select date",
+            dateFormat: "d MM, yy",
+            altField: "#SelectedEndDate",
+            altFormat: "yy-mm-dd",
+            changeMonth: true,
+            changeYear: true,
+            minDate: StartDate,
+            maxDate: new Date(""),
+            beforeShowDay: function (date) {
+                if (IsAvailableDate(date)) {
+                    return [true];
+                }
+                else {
+                    return [false];
+                }
+            }
+        });
+
+        function IsAvailableDate(date) {
+            var result = true;
+            var disabledDates = "20-9-2025,21-9-2025,22-9-2025";
+            if (disabledDates == undefined) {
+                disabledDates = '';
+            }
+            var disabledDatesArray = disabledDates.split(',');
+            var curDate = date.getDate() + "-" + (date.getMonth() + 1) + "-" + date.getFullYear();
+            if ($.inArray(curDate, disabledDatesArray) == -1) {
+                result = true;
+            }
+            else {
+                result = false;
+            }
+            return result;
+        }
+
+        function IsDisableDate(date) {
+            var result = false;
+            var curDate = date.getDate() + "-" + (date.getMonth() + 1) + "-" + date.getFullYear();
+            if ($.inArray(curDate, $fixedHoursDisableDates) > -1) {
+                result = true;
+            }
+            else {
+                result = false;
+            }
+            return result;
+        }
+
+        if ('0' > 0) {
+            $('#CustomStartTimeSelected').val('');
+            $('#CustomEndTimeSelected').val('');
+            let str = "";
+            str = str.replace(/<br\s*\/?>/gi, '\r\n');
+            $("#Memo").val(str);
+
+            if ('False' == 'True') {
+                $("#enddatepicker").val('');
+                $("#SelectedEndDate").val('');
+                $("#enddatepicker").change();
+                $("#exceptiondatepicker").val('');
+                if ('False' == 'True') {
+                    $('#IsRecurring').prop('checked', true);
+                    $("#IsRecurring").trigger("change");
+                    $(".isRecurringLabel").addClass("readOnly");
+                }
+            }
+        }
+    });
+
+    $('#IsRecurring').change(function () {
+        if (this.checked) {
+            $(".PlanningDates").show();
+            $("#IsRecurring").val('True');
+            $("#enddatepicker").removeAttr("disabled");
+            $("#exceptiondatepicker").removeAttr("disabled");
+            $("#SelectedEndDate").attr("required", "required");
+            $("#ConfirmButton").html("Boeking bevestigen<i class='fas fa-pull-right fa-chevron-circle-right'></i>")
+        }
+        else {
+            $("#ConfirmButton").html("Boeking bevestigen<i class='fas fa-pull-right fa-chevron-circle-right'></i>")
+            $(".PlanningDates").hide();
+            $("#IsRecurring").val('False');
+            $("#enddatepicker").val("");
+            $("#exceptiondatepicker").val("");
+            $("#enddatepicker").removeAttr("value");
+            $("#enddatepicker").attr("disabled", "disabled");
+            $("#exceptiondatepicker").removeAttr("value");
+            $("#exceptiondatepicker").attr("disabled", "disabled");
+            $("#SelectedEndDate").removeAttr("required", "required");
+        }
+    });
+    $(document).ready(function () {
+        $("#datepicker").datepicker();
+        $('#calDiv').click(function () {
+            $("#datepicker").focus();
+        });
+
+        $('#endDateCalDiv').click(function () {
+            $("#enddatepicker").focus();
+        });
+
+        $("#exceptiondatepicker").datepicker();
+        $("#ExceptioncalDiv").click(function () {
+            $("#exceptiondatepicker").focus();
+        })
+    });
+
+    function UpdatePlanningValues(fieldValueOption) {
+        if ("allrental" == fieldValueOption) {
+            $("#EditPlanningRentals").val(true);
+            $("#SelectedEndDate").attr("required", "required");
+            $(".PlanningDates").show();
+            $(".isRecurringLabel").show();
+        }
+        else {
+            $("#EditPlanningRentals").val(false);
+            $("#SelectedEndDate").removeAttr("required", "required");
+            $(".PlanningDates").hide();
+            $(".isRecurringLabel").hide();
+        }
+    }
+</script>
+
+
+    </div>
+    <div class="overlay" style="display: none;">
+        <img id="gif" src="/uithoorn/img/gif/ajax-loading.gif">        
+    </div>
+    <footer>
+
+        <div class="container">
+            © 2021.01.26-versie.2.3
+        </div>
+
+    </footer>
+
+<div id="ui-datepicker-div" class="ui-datepicker ui-widget ui-widget-content ui-helper-clearfix ui-corner-all"><div class="ui-datepicker-header ui-widget-header ui-helper-clearfix ui-corner-all"><a class="ui-datepicker-prev ui-corner-all ui-state-disabled" title="&lt;vorige"><span class="ui-icon ui-icon-circle-triangle-w"><vorige< span=""></vorige<></span></a><a class="ui-datepicker-next ui-corner-all" data-handler="next" data-event="click" title="volgende&gt;"><span class="ui-icon ui-icon-circle-triangle-e">volgende&gt;</span></a><div class="ui-datepicker-title"><select class="ui-datepicker-month" data-handler="selectMonth" data-event="change"><option value="8" selected="selected">sep</option><option value="9">okt</option><option value="10">nov</option><option value="11">dec</option></select><select class="ui-datepicker-year" data-handler="selectYear" data-event="change"><option value="2025" selected="selected">2025</option><option value="2026">2026</option><option value="2027">2027</option><option value="2028">2028</option><option value="2029">2029</option><option value="2030">2030</option><option value="2031">2031</option><option value="2032">2032</option><option value="2033">2033</option><option value="2034">2034</option><option value="2035">2035</option></select></div></div><table class="ui-datepicker-calendar"><thead><tr><th scope="col"><span title="maandag">ma</span></th><th scope="col"><span title="dinsdag">di</span></th><th scope="col"><span title="woensdag">wo</span></th><th scope="col"><span title="donderdag">do</span></th><th scope="col"><span title="vrijdag">vr</span></th><th scope="col" class="ui-datepicker-week-end"><span title="zaterdag">za</span></th><th scope="col" class="ui-datepicker-week-end"><span title="zondag">zo</span></th></tr></thead><tbody><tr><td class=" ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">1</span></td><td class=" ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">2</span></td><td class=" ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">3</span></td><td class=" ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">4</span></td><td class=" ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">5</span></td><td class=" ui-datepicker-week-end ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">6</span></td><td class=" ui-datepicker-week-end ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">7</span></td></tr><tr><td class=" ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">8</span></td><td class=" ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">9</span></td><td class=" ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">10</span></td><td class=" ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">11</span></td><td class=" ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">12</span></td><td class=" ui-datepicker-week-end ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">13</span></td><td class=" ui-datepicker-week-end ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">14</span></td></tr><tr><td class=" ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">15</span></td><td class=" ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">16</span></td><td class=" ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">17</span></td><td class=" ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">18</span></td><td class=" ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">19</span></td><td class=" ui-datepicker-week-end ui-datepicker-unselectable ui-state-disabled undefined ui-datepicker-today"><span class="ui-state-default">20</span></td><td class=" ui-datepicker-week-end ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">21</span></td></tr><tr><td class=" ui-datepicker-unselectable ui-state-disabled undefined"><span class="ui-state-default">22</span></td><td class=" undefined ui-datepicker-current-day" data-handler="selectDay" data-event="click" data-month="8" data-year="2025"><a class="ui-state-default ui-state-active" href="#">23</a></td><td class=" undefined" data-handler="selectDay" data-event="click" data-month="8" data-year="2025"><a class="ui-state-default" href="#">24</a></td><td class=" undefined" data-handler="selectDay" data-event="click" data-month="8" data-year="2025"><a class="ui-state-default" href="#">25</a></td><td class=" undefined" data-handler="selectDay" data-event="click" data-month="8" data-year="2025"><a class="ui-state-default" href="#">26</a></td><td class=" ui-datepicker-week-end undefined" data-handler="selectDay" data-event="click" data-month="8" data-year="2025"><a class="ui-state-default" href="#">27</a></td><td class=" ui-datepicker-week-end undefined" data-handler="selectDay" data-event="click" data-month="8" data-year="2025"><a class="ui-state-default" href="#">28</a></td></tr><tr><td class=" undefined" data-handler="selectDay" data-event="click" data-month="8" data-year="2025"><a class="ui-state-default" href="#">29</a></td><td class=" undefined" data-handler="selectDay" data-event="click" data-month="8" data-year="2025"><a class="ui-state-default" href="#">30</a></td><td class=" ui-datepicker-other-month ui-datepicker-unselectable ui-state-disabled">&nbsp;</td><td class=" ui-datepicker-other-month ui-datepicker-unselectable ui-state-disabled">&nbsp;</td><td class=" ui-datepicker-other-month ui-datepicker-unselectable ui-state-disabled">&nbsp;</td><td class=" ui-datepicker-week-end ui-datepicker-other-month ui-datepicker-unselectable ui-state-disabled">&nbsp;</td><td class=" ui-datepicker-week-end ui-datepicker-other-month ui-datepicker-unselectable ui-state-disabled">&nbsp;</td></tr></tbody></table></div></body></html>

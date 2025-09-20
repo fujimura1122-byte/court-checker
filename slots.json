@@ -1,0 +1,9 @@
+{
+  "weeks_ahead": 2,
+  "duration_value": "1,5",
+  "targets": [
+    { "weekday": "Mon", "start": "20:00" },
+    { "weekday": "Thu", "start": "20:00" },
+    { "weekday": "Sun", "start": "14:00" }
+  ]
+}
