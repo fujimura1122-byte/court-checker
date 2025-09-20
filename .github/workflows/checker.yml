@@ -1,16 +1,23 @@
 ﻿name: court-checker
 
+# Pages へ公開するので write 権限を付与
+permissions:
+  contents: write
+
 on:
-  workflow_dispatch: {}
+  # 毎週金曜 09:00（CEST = UTC+2）に実行
+  # ※冬時間（CET = UTC+1）に入ったら 0 8 * * 5 に変更してください
   schedule:
-    - cron: "0 7 * * 5"  # 毎週金曜 09:00（CEST）。冬は 0 8 * * 5 に
+    - cron: "0 7 * * 5"
+  workflow_dispatch: {}
 
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 25
     env:
       HEADLESS: "true"
+
     steps:
       - uses: actions/checkout@v4
 
@@ -24,15 +31,63 @@ jobs:
           pip install -r requirements.txt
           python -m playwright install --with-deps
 
-      - name: Run checker (print to console & file)
-        shell: bash
+      - name: Run checker
         run: |
-          set -euo pipefail
           python -u check_next2weeks_targets.py | tee result.txt
-          echo "---- result.txt (below) ----"
-          cat result.txt || true
 
-      - name: Upload artifacts (result, csv, screenshots)
+      # 実行ページの Summary にも結果を表示（GitHub上でも一目で確認可）
+      - name: Show summary on run page
+        if: ${{ always() }}
+        run: |
+          echo "### Court availability (latest)" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          sed 's/^/- /' result.txt >> $GITHUB_STEP_SUMMARY
+
+      # 結果の簡易HTMLを生成（Pages 用）
+      - name: Build simple site
+        run: |
+          python - <<'PY'
+          from datetime import datetime, timezone
+          import html
+          txt = open('result.txt','r',encoding='utf-8').read()
+          safe = html.escape(txt)
+          updated = datetime.now(timezone.utc).strftime('%Y-%m-%d %H:%M:%SZ')
+          html_doc = f"""<!doctype html><meta charset="utf-8">
+          <title>Court Checker – Latest</title>
+          <style>
+            :root{{color-scheme:light dark}}
+            body{{font-family:system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial;max-width:820px;margin:40px auto;line-height:1.6;padding:0 16px}}
+            header{{display:flex;justify-content:space-between;align-items:center;margin-bottom:12px}}
+            h1{{font-size:1.4rem;margin:0}}
+            .stamp{{opacity:.7;font-size:.9rem}}
+            pre{{background:#f6f8fa;padding:14px;border-radius:10px;white-space:pre-wrap;border:1px solid #e5e7eb}}
+            footer{{margin-top:18px;opacity:.7;font-size:.9rem}}
+            a{{color:inherit}}
+          </style>
+          <header>
+            <h1>Latest court availability</h1>
+            <div class="stamp">Updated: {updated} (UTC)</div>
+          </header>
+          <pre>{safe}</pre>
+          <footer>
+            This page is auto-published by GitHub Actions. Reload to see the latest run.
+          </footer>
+          """
+          import pathlib, os
+          pathlib.Path("site").mkdir(exist_ok=True)
+          open("site/index.html","w",encoding="utf-8").write(html_doc)
+          PY
+
+      # Pages に公開
+      - name: Publish to GitHub Pages
+        uses: peaceiris/actions-gh-pages@v3
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ./site
+          force_orphan: true
+
+      # ついでに成果物も残す（任意）
+      - name: Upload artifacts
         if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
