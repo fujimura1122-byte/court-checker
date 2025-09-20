@@ -1,9 +1,10 @@
 {
   "weeks_ahead": 2,
-  "duration_value": "1,5",
   "targets": [
-    { "weekday": "Mon", "start": "20:00" },
-    { "weekday": "Thu", "start": "20:00" },
-    { "weekday": "Sun", "start": "14:00" }
+    { "weekday": "Mon", "start": "20:00" },  // 月 20:00–21:30
+    { "weekday": "Thu", "start": "20:00" },  // 木 20:00–21:30
+    { "weekday": "Sun", "start": "15:30" },  // 日 15:30–17:00
+    { "weekday": "Sat", "start": "17:00" },  // 土 17:00–18:30
+    { "weekday": "Sun", "start": "14:00" }   // 日 14:00–15:30
   ]
 }
