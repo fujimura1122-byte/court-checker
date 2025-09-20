@@ -221,12 +221,13 @@ def main():
 
     results = []
 
-    with sync_playwright() as p:
+with sync_playwright() as p:
     browser = p.chromium.launch(headless=HEADLESS)
     page = browser.new_page()
     page.set_default_timeout(20000)  # 20秒に延長
 
     page.goto(BOOK_URL, wait_until="networkidle")
+
 
 
         # 1) 所要時間（1,5 uur 優先）を選択
