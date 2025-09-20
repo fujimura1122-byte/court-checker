@@ -1,0 +1,34 @@
+﻿name: court-checker
+
+on:
+  schedule:
+    # CEST(UTC+2)の金曜 09:00 → UTCだと 07:00
+    - cron: "0 7 * * 5"
+  workflow_dispatch: {}   # 手動実行ボタン
+
+jobs:
+  run:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install deps (Playwright + native deps)
+        run: |
+          pip install -r requirements.txt
+          python -m playwright install --with-deps
+
+      - name: Run checker
+        # HEADLESS はコード内デフォルト True。何も設定不要です。
+        run: |
+          python check_next2weeks_targets.py | tee result.txt
+
+      - name: Upload artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: result
+          path: result.txt
