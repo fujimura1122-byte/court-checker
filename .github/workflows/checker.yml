@@ -1,34 +1,44 @@
 ﻿name: court-checker
 
 on:
+  workflow_dispatch: {}
   schedule:
-    # CEST(UTC+2)の金曜 09:00 → UTCだと 07:00
-    - cron: "0 7 * * 5"
-  workflow_dispatch: {}   # 手動実行ボタン
+    - cron: "0 7 * * 5"  # 毎週金曜 09:00（CEST）。冬は 0 8 * * 5 に
 
 jobs:
   run:
     runs-on: ubuntu-latest
-    timeout-minutes: 15
+    timeout-minutes: 20
+    env:
+      HEADLESS: "true"
     steps:
       - uses: actions/checkout@v4
 
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
+          cache: "pip"
 
-      - name: Install deps (Playwright + native deps)
+      - name: Install deps
         run: |
           pip install -r requirements.txt
           python -m playwright install --with-deps
 
-      - name: Run checker
-        # HEADLESS はコード内デフォルト True。何も設定不要です。
+      - name: Run checker (print to console & file)
+        shell: bash
         run: |
-          python check_next2weeks_targets.py | tee result.txt
+          set -euo pipefail
+          python -u check_next2weeks_targets.py | tee result.txt
+          echo "---- result.txt (below) ----"
+          cat result.txt || true
 
-      - name: Upload artifact
+      - name: Upload artifacts (result, csv, screenshots)
+        if: ${{ always() }}
         uses: actions/upload-artifact@v4
         with:
-          name: result
-          path: result.txt
+          name: run-artifacts
+          path: |
+            result.txt
+            results.csv
+            screenshots/**
+          if-no-files-found: ignore
